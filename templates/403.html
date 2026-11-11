@@ -1,0 +1,18 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acesso negado · Painel DANFE</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%276%27 fill=%27%23059669%27/%3E%3Cpath fill=%27%23fff%27 d=%27M5 7h1.5v10H5zM8 7h1v10H8zM10.5 7H13v10h-2.5zM14.5 7h1v10h-1zM17 7h2v10h-2z%27/%3E%3C/svg%3E">
+  <script src="{% static 'js/tema.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="flex min-h-screen items-center justify-center p-6">
+  <div class="cartao max-w-md p-8 text-center">
+    <p class="legenda">Erro 403</p>
+    <h1 class="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Você não tem acesso a esta página</h1>
+    <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Esta área é restrita ao perfil Administrador.</p>
+    <a href="/" class="btn-primario mt-6">Voltar às notas</a>
+  </div>
+</body>
+</html>

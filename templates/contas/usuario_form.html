@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block cabecalho %}{{ titulo }}{% endblock %}
+{% block subcabecalho %}{% if editado %}{{ editado.username }}{% else %}Crie o acesso e escolha o perfil{% endif %}{% endblock %}
+{% block conteudo %}
+<form method="post" class="cartao max-w-2xl p-6" novalidate>
+  {% csrf_token %}
+  {% for erro in form.non_field_errors %}<p class="erro-campo mb-3">{{ erro }}</p>{% endfor %}
+  <div class="grid gap-4 sm:grid-cols-2">
+    {% include "_campo.html" with campo=form.first_name %}
+    {% include "_campo.html" with campo=form.last_name %}
+    {% include "_campo.html" with campo=form.username %}
+    {% include "_campo.html" with campo=form.email %}
+    {% include "_campo.html" with campo=form.perfil %}
+    {% include "_campo.html" with campo=form.senha %}
+  </div>
+  <p class="mt-3 text-xs text-slate-500 dark:text-slate-400"><strong>Administrador</strong> acompanha a importação e gerencia usuários. <strong>Consulta</strong> apenas visualiza notas e estatísticas.</p>
+  <div class="mt-4">{% include "_campo.html" with campo=form.is_active %}</div>
+  <div class="mt-6 flex gap-3">
+    <button class="btn-primario">Salvar usuário</button>
+    <a href="{% url 'contas:usuarios' %}" class="btn-suave">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

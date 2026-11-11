@@ -1,0 +1,85 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Painel{% endblock %} · Painel DANFE</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%276%27 fill=%27%23059669%27/%3E%3Cpath fill=%27%23fff%27 d=%27M5 7h1.5v10H5zM8 7h1v10H8zM10.5 7H13v10h-2.5zM14.5 7h1v10h-1zM17 7h2v10h-2z%27/%3E%3C/svg%3E">
+  <script src="{% static 'js/tema.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="min-h-screen">
+{% with rota=request.resolver_match.url_name %}
+<div class="flex min-h-screen">
+  <!-- Menu lateral -->
+  <div id="fundo-menu" class="fixed inset-0 z-30 hidden bg-slate-900/50 lg:hidden" onclick="alternarMenu()"></div>
+  <aside id="menu" class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-slate-200 bg-white transition-transform dark:border-slate-800 dark:bg-slate-900 lg:static lg:translate-x-0">
+    <a href="{% url 'notas:painel' %}" class="flex items-center gap-3 px-5 py-5">
+      {% include "_logo.html" %}
+      <span>
+        <span class="block text-sm font-semibold leading-tight text-slate-900 dark:text-white">Painel DANFE</span>
+        <span class="block text-xs text-slate-500 dark:text-slate-400">Notas fiscais eletrônicas</span>
+      </span>
+    </a>
+    <nav class="flex-1 space-y-1 px-3 py-2" aria-label="Menu principal">
+      <a href="{% url 'notas:painel' %}" class="nav-item {% if rota == 'painel' or rota == 'detalhe' %}nav-ativo{% endif %}">{% include "_icones.html" with nome="notas" %}Notas fiscais</a>
+      <a href="{% url 'notas:estatisticas' %}" class="nav-item {% if rota == 'estatisticas' %}nav-ativo{% endif %}">{% include "_icones.html" with nome="graficos" %}Estatísticas</a>
+      {% if user.eh_admin %}
+      <p class="legenda px-3 pb-1 pt-5">Administração</p>
+      <a href="{% url 'notas:importacao' %}" class="nav-item {% if rota == 'importacao' %}nav-ativo{% endif %}">{% include "_icones.html" with nome="pasta" %}Importação</a>
+      <a href="{% url 'contas:usuarios' %}" class="nav-item {% if rota == 'usuarios' or rota == 'usuario_novo' or rota == 'usuario_editar' %}nav-ativo{% endif %}">{% include "_icones.html" with nome="usuarios" %}Usuários</a>
+      {% endif %}
+    </nav>
+    <div class="border-t border-slate-200 p-3 dark:border-slate-800">
+      <a href="{% url 'contas:minha_conta' %}" class="nav-item {% if rota == 'minha_conta' %}nav-ativo{% endif %}">
+        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">{{ user.iniciais }}</span>
+        <span class="min-w-0">
+          <span class="block truncate text-slate-900 dark:text-white">{{ user.nome_exibicao }}</span>
+          <span class="block text-xs font-normal text-slate-500 dark:text-slate-400">{{ user.get_perfil_display }}</span>
+        </span>
+      </a>
+      <form method="post" action="{% url 'contas:logout' %}">{% csrf_token %}
+        <button class="nav-item w-full">{% include "_icones.html" with nome="sair" %}Sair</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Conteúdo -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:px-8">
+      <button type="button" class="btn-suave px-2 lg:hidden" onclick="alternarMenu()" aria-label="Abrir menu">{% include "_icones.html" with nome="menu" %}</button>
+      <div class="min-w-0 flex-1">
+        <h1 class="truncate text-lg font-semibold text-slate-900 dark:text-white">{% block cabecalho %}{% endblock %}</h1>
+        <p class="truncate text-sm text-slate-500 dark:text-slate-400">{% block subcabecalho %}{% endblock %}</p>
+      </div>
+      {% block acoes %}{% endblock %}
+      <button type="button" onclick="alternarTema()" class="btn-suave px-2.5" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro">
+        <span class="dark:hidden">{% include "_icones.html" with nome="lua" %}</span>
+        <span class="hidden dark:inline">{% include "_icones.html" with nome="sol" %}</span>
+      </button>
+    </header>
+
+    <main class="flex-1 px-4 py-6 sm:px-8">
+      {% if messages %}
+      <div class="mb-5 space-y-2">
+        {% for m in messages %}
+        <div role="status" class="flex items-center gap-2 rounded-xl border px-4 py-3 text-sm {% if m.tags == 'error' %}border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200{% else %}border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200{% endif %}">
+          {% include "_icones.html" with nome="ok" %}{{ m }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% block conteudo %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endwith %}
+<script>
+  function alternarMenu() {
+    document.getElementById("menu").classList.toggle("-translate-x-full");
+    document.getElementById("fundo-menu").classList.toggle("hidden");
+  }
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

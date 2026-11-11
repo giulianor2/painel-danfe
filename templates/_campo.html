@@ -1,0 +1,11 @@
+{% comment %}Campo de formulário padrão. Uso: {% include "_campo.html" with campo=form.email %}{% endcomment %}
+<div>
+  {% if campo.field.widget.input_type == "checkbox" %}
+    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">{{ campo }} {{ campo.label }}</label>
+  {% else %}
+    <label for="{{ campo.id_for_label }}" class="rotulo">{{ campo.label }}</label>
+    {{ campo }}
+  {% endif %}
+  {% if campo.help_text %}<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ campo.help_text }}</p>{% endif %}
+  {% for erro in campo.errors %}<p class="erro-campo">{{ erro }}</p>{% endfor %}
+</div>

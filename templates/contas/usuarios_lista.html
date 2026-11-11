@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titulo %}Usuários{% endblock %}
+{% block cabecalho %}Usuários{% endblock %}
+{% block subcabecalho %}Quem pode entrar no painel e com qual perfil{% endblock %}
+{% block acoes %}<a href="{% url 'contas:usuario_novo' %}" class="btn-primario">{% include "_icones.html" with nome="mais" classe="h-4 w-4" %}<span class="hidden sm:inline">Novo usuário</span></a>{% endblock %}
+{% block conteudo %}
+<form method="get" class="mb-4 max-w-sm">
+  <label for="q" class="sr-only">Buscar usuário</label>
+  <input type="search" id="q" name="q" value="{{ q }}" placeholder="Buscar por nome, usuário ou e-mail">
+</form>
+<div class="cartao overflow-x-auto">
+  <table class="tabela w-full">
+    <thead class="border-b border-slate-200 dark:border-slate-800"><tr><th>Nome</th><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Último acesso</th></tr></thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+      {% for u in usuarios %}
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+        <td><a href="{% url 'contas:usuario_editar' u.pk %}" class="font-medium text-slate-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-300">{{ u.nome_exibicao }}</a>{% if u.pk == user.pk %} <span class="selo-neutro">você</span>{% endif %}</td>
+        <td class="font-mono text-xs">{{ u.username }}</td>
+        <td>{{ u.email|default:"—" }}</td>
+        <td><span class="{% if u.eh_admin %}selo-ok{% else %}selo-neutro{% endif %}">{{ u.get_perfil_display }}</span></td>
+        <td>{% if u.is_active %}<span class="selo-ok">Ativa</span>{% else %}<span class="selo-erro">Desativada</span>{% endif %}</td>
+        <td class="text-slate-500 dark:text-slate-400">{{ u.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="py-10 text-center text-slate-500">Nenhum usuário encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

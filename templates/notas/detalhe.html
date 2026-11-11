@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% load formatos %}
+{% block titulo %}{% if nota.numero %}{{ nota.sigla }} {{ nota.numero }}{% else %}{{ nota.arquivo }}{% endif %}{% endblock %}
+{% block cabecalho %}{% if nota.numero and nota.eh_servico %}NFS-e nº {{ nota.numero }} · nota de serviço{% elif nota.numero %}NF-e nº {{ nota.numero|stringformat:"09d" }} · série {{ nota.serie }}{% else %}Arquivo não lido{% endif %}{% endblock %}
+{% block subcabecalho %}{{ nota.arquivo }}{% endblock %}
+{% block acoes %}
+<a href="{% url 'notas:painel' %}" class="btn-suave">{% include "_icones.html" with nome="voltar" classe="h-4 w-4" %}<span class="hidden sm:inline">Voltar</span></a>
+<a href="{% url 'notas:pdf' nota.pk %}" target="_blank" rel="noopener" class="btn-primario">{% include "_icones.html" with nome="pdf" classe="h-4 w-4" %}<span class="hidden sm:inline">Abrir PDF</span></a>
+{% endblock %}
+{% block conteudo %}
+{% if nota.status != "OK" %}
+<div class="mb-5 flex flex-wrap items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+  {% include "_icones.html" with nome="alerta" %}
+  <div class="min-w-0 flex-1">
+    <p class="font-medium">{% if nota.status == "ERRO" %}Não foi possível ler este arquivo{% else %}Leitura parcial: confira os campos no PDF{% endif %}</p>
+    <p class="mt-0.5">{{ nota.observacao }}</p>
+  </div>
+  {% if user.eh_admin %}
+  <form method="post" action="{% url 'notas:reler' nota.pk %}">{% csrf_token %}<button class="btn-suave">Ler novamente</button></form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if nota.status != "ERRO" %}
+{% if nota.cancelada %}
+<div class="mb-5 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">{% include "_icones.html" with nome="alerta" %}Esta nota consta como cancelada no documento.</div>
+{% endif %}
+<div class="grid gap-6 xl:grid-cols-3">
+  <div class="space-y-6 xl:col-span-2">
+    <!-- Cabeçalho da nota -->
+    <section class="cartao p-6">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold text-slate-900 dark:text-white">Dados da nota</h2>
+        <span class="flex gap-2"><span class="selo-neutro">{{ nota.get_tipo_documento_display }}</span><span class="selo-{{ nota.status|lower }}">{{ nota.get_status_display }}</span></span>
+      </div>
+      <dl class="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+{% if nota.eh_servico %}
+        <div><dt class="legenda">Número</dt><dd class="mt-1"><span class="num font-medium text-slate-900 dark:text-white">{{ nota.numero|ou_traco }}</span></dd></div>
+        <div><dt class="legenda">Data de emissão</dt><dd class="mt-1"><span class="num">{{ nota.data_emissao|date:"d/m/Y"|ou_traco }}</span></dd></div>
+        <div><dt class="legenda">Competência / fato gerador</dt><dd class="mt-1"><span class="num">{{ nota.data_competencia|date:"d/m/Y"|ou_traco }}</span></dd></div>
+        <div><dt class="legenda">Situação</dt><dd class="mt-1">{{ nota.situacao|ou_traco }}</dd></div>
+        <div class="sm:col-span-2"><dt class="legenda">Natureza / tributação do ISS</dt><dd class="mt-1">{{ nota.natureza_operacao|ou_traco }}</dd></div>
+        <div><dt class="legenda">Local da prestação</dt><dd class="mt-1">{{ nota.local_prestacao|ou_traco }}</dd></div>
+        <div><dt class="legenda">Código de verificação</dt><dd class="mt-1"><span class="font-mono">{{ nota.codigo_verificacao|ou_traco }}</span></dd></div>
+        <div class="sm:col-span-2 lg:col-span-4"><dt class="legenda">Código do serviço</dt><dd class="mt-1">{{ nota.codigo_servico|ou_traco }}</dd></div>
+        <div class="sm:col-span-2 lg:col-span-4"><dt class="legenda">Discriminação do serviço</dt><dd class="mt-1">{{ nota.discriminacao|ou_traco }}</dd></div>
+{% else %}
+        <div><dt class="legenda">Número</dt><dd class="mt-1"><span class="num font-medium text-slate-900 dark:text-white">{{ nota.numero|stringformat:"09d" }}</span></dd></div>
+        <div><dt class="legenda">Série</dt><dd class="mt-1"><span class="num">{{ nota.serie }}</span></dd></div>
+        <div><dt class="legenda">Modelo</dt><dd class="mt-1"><span class="num">{{ nota.modelo|ou_traco }}</span></dd></div>
+        <div><dt class="legenda">Tipo de operação</dt><dd class="mt-1">{{ nota.get_tipo_operacao_display|ou_traco }}</dd></div>
+        <div><dt class="legenda">Data de emissão</dt><dd class="mt-1"><span class="num">{{ nota.data_emissao|date:"d/m/Y"|ou_traco }}</span></dd></div>
+        <div><dt class="legenda">Saída / entrada</dt><dd class="mt-1"><span class="num">{{ nota.data_saida|date:"d/m/Y"|ou_traco }}</span></dd></div>
+        <div class="sm:col-span-2"><dt class="legenda">Natureza da operação</dt><dd class="mt-1">{{ nota.natureza_operacao|ou_traco }}</dd></div>
+        <div class="sm:col-span-2 lg:col-span-4"><dt class="legenda">Protocolo de autorização de uso</dt><dd class="mt-1"><span class="num">{{ nota.protocolo|ou_traco }}</span></dd></div>
+{% endif %}
+      </dl>
+    </section>
+
+    <!-- Emitente / prestador -->
+    <section class="cartao p-6">
+      <h2 class="font-semibold text-slate-900 dark:text-white">{% if nota.eh_servico %}Prestador do serviço{% else %}Emitente{% endif %}</h2>
+      <p class="mt-3 text-lg font-medium text-slate-900 dark:text-white">{{ nota.emitente.razao_social|ou_traco }}</p>
+      <dl class="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div><dt class="legenda">CNPJ / CPF</dt><dd class="mt-1"><span class="num whitespace-nowrap">{{ nota.emitente.cnpj|cnpj_cpf }}</span></dd></div>
+{% if nota.eh_servico %}
+        <div><dt class="legenda">Inscrição municipal</dt><dd class="mt-1"><span class="num">{{ nota.emitente.inscricao_municipal|ou_traco }}</span></dd></div>
+{% else %}
+        <div><dt class="legenda">Inscrição estadual</dt><dd class="mt-1"><span class="num">{{ nota.emitente.inscricao_estadual|ou_traco }}</span></dd></div>
+{% endif %}
+        <div><dt class="legenda">Município / UF</dt><dd class="mt-1">{{ nota.emitente.municipio|ou_traco }}{% if nota.emitente.uf %} / {{ nota.emitente.uf }}{% endif %}</dd></div>
+        <div><dt class="legenda">Telefone</dt><dd class="mt-1"><span class="num">{{ nota.emitente.telefone|ou_traco }}</span></dd></div>
+        <div class="sm:col-span-2 lg:col-span-3"><dt class="legenda">Endereço</dt><dd class="mt-1">{{ nota.emitente.endereco|ou_traco }}</dd></div>
+        <div><dt class="legenda">CEP</dt><dd class="mt-1"><span class="num">{{ nota.emitente.cep|cep }}</span></dd></div>
+      </dl>
+    </section>
+
+    <!-- Destinatário / tomador -->
+    <section class="cartao p-6">
+      <h2 class="font-semibold text-slate-900 dark:text-white">{% if nota.eh_servico %}Tomador do serviço{% else %}Destinatário{% endif %}</h2>
+      <dl class="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="sm:col-span-2"><dt class="legenda">Nome / razão social</dt><dd class="mt-1">{{ nota.dest_nome|ou_traco }}</dd></div>
+        <div><dt class="legenda">CNPJ / CPF</dt><dd class="mt-1"><span class="num whitespace-nowrap">{{ nota.dest_documento|cnpj_cpf }}</span></dd></div>
+        <div><dt class="legenda">Município / UF</dt><dd class="mt-1">{{ nota.dest_municipio|ou_traco }}{% if nota.dest_uf %} / {{ nota.dest_uf }}{% endif %}</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  <div class="space-y-6">
+    <!-- Valores -->
+    <section class="cartao p-6">
+      <h2 class="font-semibold text-slate-900 dark:text-white">Valores</h2>
+      <p class="legenda mt-4">{% if nota.eh_servico %}Valor do serviço{% else %}Valor total da nota{% endif %}</p>
+      <p class="num mt-1 text-3xl font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">{{ nota.valor_total|moeda }}</p>
+      <dl class="mt-5 divide-y divide-slate-100 text-sm dark:divide-slate-800">
+{% if nota.eh_servico %}
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Descontos</dt><dd class="num">{% if nota.valor_desconto %}− {% endif %}{{ nota.valor_desconto|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Deduções</dt><dd class="num">{{ nota.valor_deducoes|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Retenções federais</dt><dd class="num">{% if nota.retencoes_federais %}− {% endif %}{{ nota.retencoes_federais|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Valor líquido</dt><dd class="num font-medium text-slate-900 dark:text-white">{{ nota.valor_liquido|moeda }}</dd></div>
+{% else %}
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Produtos</dt><dd class="num">{{ nota.valor_produtos|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Frete</dt><dd class="num">{{ nota.valor_frete|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Seguro</dt><dd class="num">{{ nota.valor_seguro|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Outras despesas</dt><dd class="num">{{ nota.valor_outras|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Desconto</dt><dd class="num">{% if nota.valor_desconto %}− {% endif %}{{ nota.valor_desconto|moeda }}</dd></div>
+{% endif %}
+      </dl>
+    </section>
+
+    <!-- Impostos -->
+    <section class="cartao p-6">
+      <h2 class="font-semibold text-slate-900 dark:text-white">Impostos</h2>
+      <dl class="mt-3 divide-y divide-slate-100 text-sm dark:divide-slate-800">
+{% if nota.eh_servico %}
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Base de cálculo do ISS</dt><dd class="num">{{ nota.base_iss|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Alíquota do ISS</dt><dd class="num">{{ nota.aliquota_iss|floatformat:2 }}%</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Valor do ISS{% if nota.iss_retido %} (retido){% endif %}</dt><dd class="num font-medium text-slate-900 dark:text-white">{{ nota.valor_iss|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">PIS/PASEP retido</dt><dd class="num">{{ nota.valor_pis|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">COFINS retido</dt><dd class="num">{{ nota.valor_cofins|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">INSS retido</dt><dd class="num">{{ nota.valor_inss|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">IR retido</dt><dd class="num">{{ nota.valor_ir|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">CSLL retido</dt><dd class="num">{{ nota.valor_csll|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Outras retenções</dt><dd class="num">{{ nota.valor_outras_retencoes|moeda }}</dd></div>
+{% else %}
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Base de cálculo do ICMS</dt><dd class="num">{{ nota.base_icms|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Valor do ICMS</dt><dd class="num font-medium text-slate-900 dark:text-white">{{ nota.valor_icms|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Base de cálculo do ICMS ST</dt><dd class="num">{{ nota.base_icms_st|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Valor do ICMS ST</dt><dd class="num font-medium text-slate-900 dark:text-white">{{ nota.valor_icms_st|moeda }}</dd></div>
+        <div class="flex justify-between gap-4 py-2"><dt class="text-slate-600 dark:text-slate-400">Valor do IPI</dt><dd class="num font-medium text-slate-900 dark:text-white">{{ nota.valor_ipi|moeda }}</dd></div>
+{% endif %}
+        <div class="flex justify-between py-2.5"><dt class="font-medium text-slate-900 dark:text-white">Total de impostos</dt><dd class="num font-semibold text-slate-900 dark:text-white">{{ nota.total_impostos|moeda }}</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  <!-- Chave de acesso / código de verificação -->
+  <section class="cartao p-6 xl:col-span-3">
+    {% if nota.chave_acesso %}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="font-semibold text-slate-900 dark:text-white">Chave de acesso</h2>
+      <button type="button" id="copiar" data-chave="{{ nota.chave_acesso }}" class="btn-suave">Copiar chave</button>
+    </div>
+    <div class="mt-4 rounded-xl bg-white p-4 ring-1 ring-slate-200 dark:ring-0">
+      <div class="mx-auto h-16 max-w-3xl [&>svg]:h-full [&>svg]:w-full">{{ barras }}</div>
+    </div>
+    <p class="num mt-4 break-words text-center font-mono text-sm tracking-wide text-slate-900 dark:text-white sm:text-base">{{ nota.chave_acesso|chave }}</p>
+    <p class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">{% if nota.eh_servico %}Código de barras (Code 128) gerado a partir da chave; o documento original traz um QR Code. Consulte a autenticidade no Portal Nacional da NFS-e.{% else %}Código de barras Code 128 da chave. Use a chave para consultar a autenticidade no Portal Nacional da NF-e.{% endif %}</p>
+    {% else %}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="font-semibold text-slate-900 dark:text-white">Código de verificação</h2>
+      <button type="button" id="copiar" data-chave="{{ nota.codigo_verificacao }}" data-rotulo="Copiar código" class="btn-suave">Copiar código</button>
+    </div>
+    <p class="mt-4 text-center font-mono text-2xl tracking-[0.3em] text-slate-900 dark:text-white">{{ nota.codigo_verificacao|ou_traco }}</p>
+    <p class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">Este modelo de nota de serviço da prefeitura não tem chave de acesso nem código de barras. A autenticidade é conferida no site da prefeitura com o número da nota e este código.</p>
+    {% endif %}
+  </section>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    var botao = document.getElementById("copiar");
+    if (!botao) return;
+    botao.addEventListener("click", function () {
+      var rotulo = botao.textContent;
+      var feito = function () { botao.textContent = "Copiado"; setTimeout(function () { botao.textContent = rotulo; }, 2000); };
+      if (navigator.clipboard) navigator.clipboard.writeText(botao.dataset.chave).then(feito);
+      else { var t = document.createElement("textarea"); t.value = botao.dataset.chave; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); feito(); }
+    });
+  })();
+</script>
+{% endblock %}

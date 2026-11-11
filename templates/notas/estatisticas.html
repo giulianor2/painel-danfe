@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load formatos static %}
+{% block titulo %}Estatísticas{% endblock %}
+{% block cabecalho %}Estatísticas{% endblock %}
+{% block subcabecalho %}{% if de or ate or tipo %}Filtro aplicado{% else %}Todas as notas importadas{% endif %}{% endblock %}
+{% block conteudo %}
+<form method="get" class="mb-6 flex flex-wrap items-end gap-3">
+  <div><label for="de" class="rotulo">Emissão de</label><input type="date" id="de" name="de" value="{{ de }}"></div>
+  <div><label for="ate" class="rotulo">até</label><input type="date" id="ate" name="ate" value="{{ ate }}"></div>
+  <div><label for="tipo" class="rotulo">Tipo</label>
+    <select id="tipo" name="tipo"><option value="">Todos</option>{% for v, r in tipo_opcoes %}<option value="{{ v }}" {% if tipo == v %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+  </div>
+  <button class="btn-primario">Aplicar</button>
+  {% if de or ate or tipo %}<a href="{% url 'notas:estatisticas' %}" class="btn-suave">Limpar</a>{% endif %}
+</form>
+
+{% if not kpis.qtd %}
+<div class="cartao px-6 py-14 text-center">
+  <p class="font-medium text-slate-900 dark:text-white">Sem notas {% if de or ate or tipo %}neste filtro{% else %}importadas ainda{% endif %}</p>
+  <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Os gráficos aparecem assim que houver notas lidas.</p>
+</div>
+{% else %}
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <div class="cartao p-5"><p class="legenda">Notas</p><p class="num mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{{ kpis.qtd }}</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ kpis.qtd_produto }} de produto · {{ kpis.qtd_servico }} de serviço</p></div>
+  <div class="cartao p-5"><p class="legenda">Valor total</p><p class="num mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{{ kpis.total|moeda }}</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">produto: {{ kpis.total_produto|moeda }} · serviço: {{ kpis.total_servico|moeda }}</p></div>
+  <div class="cartao p-5"><p class="legenda">Valor médio por nota</p><p class="num mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{{ kpis.media|moeda }}</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ kpis.emitentes }} emitente{{ kpis.emitentes|pluralize }} / prestador{{ kpis.emitentes|pluralize:"es" }}</p></div>
+  <div class="cartao p-5"><p class="legenda">Impostos destacados</p><p class="num mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{{ kpis.impostos|moeda }}</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ kpis.carga|floatformat:1 }}% do valor total (ICMS, ST, IPI, ISS e retenções)</p></div>
+</div>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-2">
+  <section class="cartao p-6 xl:col-span-2">
+    <h2 class="font-semibold text-slate-900 dark:text-white">Valor das notas por mês de emissão</h2>
+    <div class="mt-4 h-72"><canvas id="g-meses" role="img" aria-label="Gráfico de barras: valor total das notas por mês"></canvas></div>
+  </section>
+  <section class="cartao p-6">
+    <h2 class="font-semibold text-slate-900 dark:text-white">Emitentes e prestadores com maior valor</h2>
+    <div class="mt-4 h-72"><canvas id="g-emitentes" role="img" aria-label="Gráfico de barras: valor por emitente"></canvas></div>
+  </section>
+  <section class="cartao p-6">
+    <h2 class="font-semibold text-slate-900 dark:text-white">Impostos por tipo</h2>
+    <div class="mt-4 h-72"><canvas id="g-impostos" role="img" aria-label="Gráfico de barras: ICMS, ICMS ST, IPI, ISS e retenções federais"></canvas></div>
+  </section>
+  <section class="cartao p-6">
+    <h2 class="font-semibold text-slate-900 dark:text-white">Valor por UF do emitente / prestador</h2>
+    <div class="mt-4 h-72"><canvas id="g-ufs" role="img" aria-label="Gráfico de barras: valor por UF do emitente"></canvas></div>
+  </section>
+  <section class="cartao overflow-x-auto p-6">
+    <h2 class="font-semibold text-slate-900 dark:text-white">Maiores notas</h2>
+    <table class="mt-3 w-full text-sm">
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        {% for n in maiores %}
+        <tr>
+          <td class="py-2.5 pr-3"><a href="{% url 'notas:detalhe' n.pk %}" class="num font-medium text-slate-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-300">{% if n.eh_servico %}{{ n.numero }}{% else %}{{ n.numero|stringformat:"06d" }}{% endif %}</a></td>
+          <td class="py-2.5 pr-3"><span class="block max-w-[14rem] truncate">{{ n.emitente.razao_social }}</span></td>
+          <td class="num py-2.5 pr-3 text-slate-500 dark:text-slate-400">{{ n.data_emissao|date:"d/m/Y" }}</td>
+          <td class="num py-2.5 text-right font-medium text-slate-900 dark:text-white">{{ n.valor_total|moeda }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{{ graficos|json_script:"dados-graficos" }}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if kpis.qtd %}
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+  var dados = JSON.parse(document.getElementById("dados-graficos").textContent);
+  var real = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  var compacto = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
+  var graficos = [];
+
+  function cores() {
+    var escuro = document.documentElement.classList.contains("dark");
+    return {
+      barra: escuro ? "#34d399" : "#059669",
+      texto: escuro ? "#94a3b8" : "#475569",
+      grade: escuro ? "rgba(148,163,184,0.15)" : "rgba(100,116,139,0.15)",
+    };
+  }
+
+  function barras(id, rotulos, valores, horizontal, extra) {
+    var c = cores();
+    var eixoValor = { beginAtZero: true, grid: { color: c.grade }, border: { display: false }, ticks: { color: c.texto, callback: function (v) { return "R$ " + compacto.format(v); } } };
+    var eixoCategoria = { grid: { display: false }, ticks: { color: c.texto, callback: function (v) { var r = this.getLabelForValue(v); return r.length > 26 ? r.slice(0, 25) + "…" : r; } } };
+    return new Chart(document.getElementById(id), {
+      type: "bar",
+      data: { labels: rotulos, datasets: [{ data: valores, backgroundColor: c.barra, borderRadius: 4, maxBarThickness: 44 }] },
+      options: {
+        indexAxis: horizontal ? "y" : "x",
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function (ctx) { var t = real.format(ctx.raw); return extra ? t + " · " + extra[ctx.dataIndex] + " nota(s)" : t; } } },
+        },
+        scales: horizontal ? { x: eixoValor, y: eixoCategoria } : { x: eixoCategoria, y: eixoValor },
+      },
+    });
+  }
+
+  function desenhar() {
+    graficos.forEach(function (g) { g.destroy(); });
+    graficos = [
+      barras("g-meses", dados.meses.rotulos, dados.meses.total, false, dados.meses.qtd),
+      barras("g-emitentes", dados.emitentes.rotulos, dados.emitentes.total, true),
+      barras("g-impostos", dados.impostos.rotulos, dados.impostos.total, false),
+      barras("g-ufs", dados.ufs.rotulos, dados.ufs.total, true, dados.ufs.qtd),
+    ];
+  }
+  desenhar();
+  document.addEventListener("tema", desenhar);  // redesenha ao trocar o tema
+})();
+</script>
+{% endif %}
+{% endblock %}

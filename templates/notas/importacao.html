@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block titulo %}Importação{% endblock %}
+{% block cabecalho %}Importação automática{% endblock %}
+{% block subcabecalho %}Acompanhe a leitura dos PDFs da pasta{% endblock %}
+{% block acoes %}{% if user.is_superuser %}<a href="#apagar" class="btn-suave text-rose-700 dark:text-rose-300">Apagar todas as notas</a>{% endif %}{% endblock %}
+{% block conteudo %}
+<div class="grid gap-6 xl:grid-cols-3">
+  <section class="cartao p-6 xl:col-span-2">
+    <h2 class="font-semibold text-slate-900 dark:text-white">Pasta monitorada</h2>
+    <p class="mt-3 break-all rounded-lg bg-slate-100 px-3 py-2 font-mono text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-100">{{ pasta }}</p>
+    {% if not pasta_existe %}
+    <p class="mt-3 flex items-center gap-2 text-sm text-rose-700 dark:text-rose-300">{% include "_icones.html" with nome="alerta" %}Esta pasta não existe. Ajuste DANFE_PASTA no arquivo .env e reinicie o sistema.</p>
+    {% endif %}
+    <p class="mt-4 text-sm text-slate-600 dark:text-slate-400">A pasta (e suas subpastas) é verificada a cada <strong class="text-slate-900 dark:text-white">{{ intervalo }} segundos</strong>. Todo PDF novo é lido e entra no painel sozinho; arquivos já importados são ignorados. A pasta e o intervalo são definidos no arquivo <span class="font-mono">.env</span>.</p>
+  </section>
+  <section class="cartao p-6">
+    <p class="legenda">Notas no banco</p>
+    <p class="num mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{{ total_importadas }}</p>
+    <p class="legenda mt-5">Arquivos com problema</p>
+    <p class="num mt-2 text-3xl font-semibold {% if problemas %}text-amber-600 dark:text-amber-400{% else %}text-slate-900 dark:text-white{% endif %}">{{ problemas|length }}</p>
+  </section>
+
+  {% if user.is_superuser %}
+  <section id="apagar" class="cartao p-6 xl:col-span-3">
+    <h2 class="font-semibold text-rose-700 dark:text-rose-300">Apagar todas as notas</h2>
+    <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">Remove do banco todas as notas e os emitentes, para refazer a importação do zero. Os PDFs da pasta não são alterados e voltam a ser lidos na próxima verificação. Esta ação não pode ser desfeita.</p>
+    <form method="post" action="{% url 'notas:apagar_todas' %}" class="mt-4 flex items-end gap-2">
+      {% csrf_token %}
+      <div>
+        <label for="confirmacao" class="rotulo">Digite APAGAR para confirmar</label>
+        <input type="text" id="confirmacao" name="confirmacao" autocomplete="off" required>
+      </div>
+      <button class="btn-suave text-rose-700 dark:text-rose-300">Apagar todas as notas</button>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="cartao overflow-x-auto xl:col-span-3">
+    <h2 class="px-6 pt-6 font-semibold text-slate-900 dark:text-white">Arquivos com problema</h2>
+    <table class="tabela mt-3 w-full">
+      <thead class="border-y border-slate-200 dark:border-slate-800"><tr><th>Arquivo</th><th>Situação</th><th>Motivo</th><th>Importado em</th><th><span class="sr-only">Ações</span></th></tr></thead>
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        {% for n in problemas %}
+        <tr>
+          <td><a href="{% url 'notas:detalhe' n.pk %}" class="font-mono text-xs text-slate-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-300">{{ n.arquivo }}</a></td>
+          <td><span class="selo-{{ n.status|lower }}">{{ n.get_status_display }}</span></td>
+          <td class="text-slate-600 dark:text-slate-400">{{ n.observacao }}</td>
+          <td class="num whitespace-nowrap text-slate-500 dark:text-slate-400">{{ n.importado_em|date:"d/m/Y H:i" }}</td>
+          <td class="text-right"><form method="post" action="{% url 'notas:reler' n.pk %}">{% csrf_token %}<button class="btn-suave px-3 py-1.5 text-xs">Ler novamente</button></form></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="py-10 text-center text-slate-500 dark:text-slate-400">Nenhum arquivo com problema. Todos os PDFs foram lidos por completo.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="cartao overflow-x-auto xl:col-span-3">
+    <h2 class="px-6 pt-6 font-semibold text-slate-900 dark:text-white">Últimas importações</h2>
+    <table class="tabela mt-3 w-full">
+      <thead class="border-y border-slate-200 dark:border-slate-800"><tr><th>Quando</th><th class="!text-right">PDFs na pasta</th><th class="!text-right">Lidas</th><th class="!text-right">Com problema</th><th class="!text-right">Duplicadas</th><th>Observação</th></tr></thead>
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        {% for s in sincronizacoes %}
+        <tr>
+          <td class="num whitespace-nowrap">{{ s.executada_em|date:"d/m/Y H:i:s" }}</td>
+          <td class="num text-right">{{ s.arquivos_na_pasta }}</td>
+          <td class="num text-right">{{ s.importadas }}</td>
+          <td class="num text-right">{{ s.com_problema }}</td>
+          <td class="num text-right">{{ s.duplicadas }}</td>
+          <td class="text-slate-600 dark:text-slate-400">{{ s.mensagem|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-10 text-center text-slate-500 dark:text-slate-400">Nenhuma importação registrada ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

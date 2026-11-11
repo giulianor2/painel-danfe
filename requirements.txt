@@ -1,0 +1,6 @@
+Django>=5.1,<5.3
+mysqlclient>=2.2
+pdfplumber>=0.11
+python-barcode>=0.15
+python-dotenv>=1.0
+reportlab>=4.0   # usado apenas pelo comando gerar_danfes_exemplo

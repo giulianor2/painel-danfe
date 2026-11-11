@@ -1,0 +1,86 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · Painel DANFE</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%276%27 fill=%27%23059669%27/%3E%3Cpath fill=%27%23fff%27 d=%27M5 7h1.5v10H5zM8 7h1v10H8zM10.5 7H13v10h-2.5zM14.5 7h1v10h-1zM17 7h2v10h-2z%27/%3E%3C/svg%3E">
+  <script src="{% static 'js/tema.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="min-h-screen">
+<div class="grid min-h-screen lg:grid-cols-2">
+  <!-- Lado da marca -->
+  <section class="relative hidden overflow-hidden bg-emerald-900 p-12 text-emerald-50 lg:flex lg:flex-col lg:justify-between">
+    <div class="pointer-events-none absolute inset-0 opacity-[0.07]" style="background-image: repeating-linear-gradient(90deg, #fff 0 3px, transparent 3px 9px, #fff 9px 10px, transparent 10px 18px, #fff 18px 23px, transparent 23px 27px);"></div>
+    <div class="relative flex items-center gap-3">
+      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400 text-emerald-950">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M3 5h1.5v14H3zM6 5h1v14H6zM8.5 5H11v14H8.5zM12.5 5h1v14h-1zM15 5h2v14h-2zM18.5 5h1v14h-1zM20.5 5H21v14h-.5z"/></svg>
+      </span>
+      <span class="text-lg font-semibold">Painel DANFE</span>
+    </div>
+    <div class="relative max-w-md">
+      <h1 class="text-4xl font-semibold leading-tight tracking-tight text-white">Suas notas fiscais, lidas direto da pasta.</h1>
+      <p class="mt-4 text-emerald-100/80">Os PDFs que chegam são importados sozinhos. Consulte emitente, valores, impostos e a chave de acesso de cada nota em um só lugar.</p>
+      <dl class="mt-10 grid grid-cols-3 gap-6 border-t border-emerald-700/60 pt-6 text-sm">
+        <div><dt class="text-emerald-200/70">Importação</dt><dd class="mt-1 font-medium text-white">Automática</dd></div>
+        <div><dt class="text-emerald-200/70">Consulta</dt><dd class="mt-1 font-medium text-white">Por nota</dd></div>
+        <div><dt class="text-emerald-200/70">Visão geral</dt><dd class="mt-1 font-medium text-white">Estatísticas</dd></div>
+      </dl>
+    </div>
+    <p class="relative text-xs text-emerald-200/60">Acesso restrito a usuários cadastrados.</p>
+  </section>
+
+  <!-- Formulário -->
+  <section class="relative flex items-center justify-center p-6 sm:p-12">
+    <button type="button" onclick="alternarTema()" class="btn-suave absolute right-6 top-6 px-2.5" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro">
+      <span class="dark:hidden">{% include "_icones.html" with nome="lua" %}</span>
+      <span class="hidden dark:inline">{% include "_icones.html" with nome="sol" %}</span>
+    </button>
+    <div class="w-full max-w-sm">
+      <div class="mb-8 flex items-center gap-3 lg:hidden">{% include "_logo.html" %}<span class="font-semibold text-slate-900 dark:text-white">Painel DANFE</span></div>
+      <h2 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Entrar</h2>
+      <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Use seu usuário e senha para acessar o painel.</p>
+
+      {% if form.non_field_errors %}
+      <div role="alert" class="mt-6 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+        {% include "_icones.html" with nome="alerta" %}<span>{{ form.non_field_errors.0 }}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" class="mt-6 space-y-4" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <div>
+          <label for="id_username" class="rotulo">Usuário</label>
+          <input type="text" name="username" id="id_username" value="{{ form.username.value|default:'' }}" autocomplete="username" autofocus required>
+        </div>
+        <div>
+          <label for="id_password" class="rotulo">Senha</label>
+          <div class="relative">
+            <input type="password" name="password" id="id_password" autocomplete="current-password" required class="pr-16">
+            <button type="button" id="ver-senha" class="absolute inset-y-0 right-0 px-3 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white" aria-pressed="false">Mostrar</button>
+          </div>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+          <input type="checkbox" name="lembrar" checked> Manter conectado neste computador
+        </label>
+        <button type="submit" class="btn-primario w-full py-2.5">Entrar</button>
+      </form>
+      <p class="mt-8 text-xs text-slate-500 dark:text-slate-500">Esqueceu a senha? Peça a um administrador para redefini-la.</p>
+    </div>
+  </section>
+</div>
+<script>
+  (function () {
+    var botao = document.getElementById("ver-senha"), campo = document.getElementById("id_password");
+    botao.addEventListener("click", function () {
+      var mostrar = campo.type === "password";
+      campo.type = mostrar ? "text" : "password";
+      botao.textContent = mostrar ? "Ocultar" : "Mostrar";
+      botao.setAttribute("aria-pressed", mostrar);
+    });
+  })();
+</script>
+</body>
+</html>
